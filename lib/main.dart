@@ -1,3 +1,4 @@
+import 'package:math_expressions/math_expressions.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -14,7 +15,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => MyAppState(),
+      create: (context) => CalculatorState(),
       child: MaterialApp(
         title: 'Calculator',
         theme: ThemeData(
@@ -27,54 +28,36 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MyAppState extends ChangeNotifier {
+class CalculatorState extends ChangeNotifier {
+  var input = "";
   var output = "";
-  var currentNumber = "";
-  var operator = "";
-  var result = 0.0;
-  var resultView = 0;
 
-  void onClearPressed() {
-    output = "";
-    currentNumber = "";
-    operator = "";
-    result = 0;
-    super.notifyListeners();
-  }
-
-  void onNumberPressed(String number) {
-    if (currentNumber.isEmpty) {
-      currentNumber = number;
-    } else {
-      currentNumber += number;
-    }
-    output += number;
-    super.notifyListeners();
-  }
-
-  void onOperatorPressed(String op) {
-    if (currentNumber.isEmpty) {
+  void calculate() {
+    if (input.isEmpty) {
       return;
     }
-    operator = op;
-    result = double.parse(currentNumber);
-    currentNumber = "";
-    output += operator;
+    Parser p = Parser();
+    Expression exp = p.parse(input);
+    double result = exp.evaluate(EvaluationType.REAL, ContextModel());
+    output = result.toString();
+    input = result.toString();
     super.notifyListeners();
   }
 
-  void onResultPressed() {
-    if (operator == "+") {
-      result += double.parse(currentNumber);
-    } else if (operator == "-") {
-      result -= double.parse(currentNumber);
-    } else if (operator == "/") {
-      result /= double.parse(currentNumber);
-    } else if (operator == "x") {
-      result *= double.parse(currentNumber);
-    }
+  void clear() {
+    output = "";
+    input = "";
     super.notifyListeners();
-    output = result.toString();
+  }
+
+  void add(String s) {
+    input += s;
+    super.notifyListeners();
+  }
+
+  void remove() {
+    input = input.substring(0, input.length - 1);
+    super.notifyListeners();
   }
 }
 
@@ -84,7 +67,7 @@ class MyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
+    var calculatorState = context.watch<CalculatorState>();
     return Scaffold(
       backgroundColor: schemeColor,
       appBar: AppBar(
@@ -98,13 +81,13 @@ class MyHomePage extends StatelessWidget {
             padding: EdgeInsets.symmetric(vertical: 24.0, horizontal: 12.0),
             child: Column(
               children: [
-                Text(appState.output,
+                Text(calculatorState.input,
                     style: TextStyle(
                       fontSize: 40.0,
                     )),
                 Text(
-                  appState.result.toString(),
-                  style: TextStyle(fontSize: 40.0, fontWeight: FontWeight.w400),
+                  calculatorState.output,
+                  style: TextStyle(fontSize: 32.0, fontWeight: FontWeight.w400),
                 )
               ],
             ),
@@ -115,38 +98,38 @@ class MyHomePage extends StatelessWidget {
             child: Column(
               children: [
                 Row(
-                  children: [ClearBtn()],
+                  children: [ClearBtn(), DelBtn()],
                 ),
                 Row(
                   children: [
-                    NubmerBtn(number: "7"),
-                    NubmerBtn(number: "8"),
-                    NubmerBtn(number: "9"),
-                    OperatorBtn(operator: "/")
+                    CalculatorBtn(char: "7"),
+                    CalculatorBtn(char: "8"),
+                    CalculatorBtn(char: "9"),
+                    CalculatorBtn(char: "/")
                   ],
                 ),
                 Row(
                   children: [
-                    NubmerBtn(number: "4"),
-                    NubmerBtn(number: "5"),
-                    NubmerBtn(number: "6"),
-                    OperatorBtn(operator: "x"),
+                    CalculatorBtn(char: "4"),
+                    CalculatorBtn(char: "5"),
+                    CalculatorBtn(char: "6"),
+                    CalculatorBtn(char: "*"),
                   ],
                 ),
                 Row(
                   children: [
-                    NubmerBtn(number: "1"),
-                    NubmerBtn(number: "2"),
-                    NubmerBtn(number: "3"),
-                    OperatorBtn(operator: "+")
+                    CalculatorBtn(char: "1"),
+                    CalculatorBtn(char: "2"),
+                    CalculatorBtn(char: "3"),
+                    CalculatorBtn(char: "+")
                   ],
                 ),
                 Row(
                   children: [
-                    NubmerBtn(number: "0"),
-                    NubmerBtn(number: "."),
+                    CalculatorBtn(char: "0"),
+                    CalculatorBtn(char: "."),
                     EqualBtn(),
-                    OperatorBtn(operator: "-")
+                    CalculatorBtn(char: "-")
                   ],
                 )
               ],
@@ -158,67 +141,62 @@ class MyHomePage extends StatelessWidget {
   }
 }
 
-class NubmerBtn extends StatelessWidget {
-  final String number;
-  NubmerBtn({super.key, required this.number});
+class CalculatorBtn extends StatelessWidget {
+  final String char;
+  CalculatorBtn({super.key, required this.char});
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
+    var calcState = context.watch<CalculatorState>();
     return Expanded(
         child: ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: colorBtnNumber),
-            onPressed: () => appState.onNumberPressed(number),
-            child: Text(number,
+            onPressed: () => calcState.add(char),
+            child: Text(char,
                 style: TextStyle(fontSize: 40.0, color: colorDigits))));
   }
 }
 
-class OperatorBtn extends StatelessWidget {
-  final String operator;
-  const OperatorBtn({super.key, required this.operator});
+class EqualBtn extends StatelessWidget {
+  final String equal = "=";
+  EqualBtn({super.key});
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
+    var calcState = context.watch<CalculatorState>();
     return Expanded(
         child: ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: colorBtnNumber),
-            onPressed: () => appState.onOperatorPressed(operator),
-            child: Text(operator,
+            onPressed: () => calcState.calculate(),
+            child: Text(equal,
                 style: TextStyle(fontSize: 40.0, color: colorDigits))));
   }
 }
 
 class ClearBtn extends StatelessWidget {
-  final clear = 'AC';
-  const ClearBtn({super.key});
+  final String ac = "AC";
+  ClearBtn({super.key});
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
+    var calcState = context.watch<CalculatorState>();
     return Expanded(
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(backgroundColor: colorBtnNumber),
-        onPressed: () => appState.onClearPressed(),
-        child: Text(
-          clear,
-          style: TextStyle(fontSize: 40.0, color: colorDigits),
-        ),
-      ),
-    );
+        child: ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: colorBtnNumber),
+            onPressed: () => calcState.clear(),
+            child: Text(ac,
+                style: TextStyle(fontSize: 40.0, color: colorDigits))));
   }
 }
 
-class EqualBtn extends StatelessWidget {
-  final equal = '=';
-  const EqualBtn({super.key});
+class DelBtn extends StatelessWidget {
+  final String ac = "DEL";
+  DelBtn({super.key});
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
+    var calcState = context.watch<CalculatorState>();
     return Expanded(
-      child: ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: colorBtnNumber),
-          onPressed: () => appState.onResultPressed(),
-          child: Text(equal,
-              style: TextStyle(fontSize: 40.0, color: colorDigits))),
-    );
+        child: ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: colorBtnNumber),
+            onPressed: () => calcState.remove(),
+            child: Text(ac,
+                style: TextStyle(fontSize: 40.0, color: colorDigits))));
   }
 }
